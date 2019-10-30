@@ -23,6 +23,7 @@ class JWTGenerateSecretCommand extends Command
      */
     protected $signature = 'jwt:secret
         {--s|show : Display the key instead of modifying files.}
+        {--always-no : Skip generating key if it already exists.}
         {--f|force : Skip confirmation when overwriting an existing key.}';
 
     /**
@@ -39,7 +40,7 @@ class JWTGenerateSecretCommand extends Command
      */
     public function handle()
     {
-        $key = Str::random(32);
+        $key = Str::random(64);
 
         if ($this->option('show')) {
             $this->comment($key);
@@ -51,17 +52,23 @@ class JWTGenerateSecretCommand extends Command
             return $this->displayKey($key);
         }
 
-        if ($this->isConfirmed() === false) {
-            $this->comment('Phew... No changes were made to your secret key.');
-
-            return;
-        }
-
         if (Str::contains(file_get_contents($path), 'JWT_SECRET') === false) {
-            // update existing entry
-            file_put_contents($path, PHP_EOL."JWT_SECRET=$key", FILE_APPEND);
-        } else {
             // create new entry
+            file_put_contents($path, PHP_EOL."JWT_SECRET=$key".PHP_EOL, FILE_APPEND);
+        } else {
+            if ($this->option('always-no')) {
+                $this->comment('Secret key already exists. Skipping...');
+
+                return;
+            }
+
+            if ($this->isConfirmed() === false) {
+                $this->comment('Phew... No changes were made to your secret key.');
+
+                return;
+            }
+
+            // update existing entry
             file_put_contents($path, str_replace(
                 'JWT_SECRET='.$this->laravel['config']['jwt.secret'],
                 'JWT_SECRET='.$key, file_get_contents($path)
@@ -106,6 +113,11 @@ class JWTGenerateSecretCommand extends Command
     {
         if (method_exists($this->laravel, 'environmentFilePath')) {
             return $this->laravel->environmentFilePath();
+        }
+
+        // check if laravel version Less than 5.4.17
+        if (version_compare($this->laravel->version(), '5.4.17', '<')) {
+            return $this->laravel->basePath().DIRECTORY_SEPARATOR.'.env';
         }
 
         return $this->laravel->basePath('.env');

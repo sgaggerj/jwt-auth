@@ -11,7 +11,6 @@
 
 namespace Tymon\JWTAuth\Claims;
 
-use Tymon\JWTAuth\Exceptions\InvalidClaimException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 
 class NotBefore extends Claim
@@ -22,18 +21,6 @@ class NotBefore extends Claim
      * {@inheritdoc}
      */
     protected $name = 'nbf';
-
-    /**
-     * {@inheritdoc}
-     */
-    public function validateCreate($value)
-    {
-        if (! is_numeric($value) || $this->isFuture($value)) {
-            throw new InvalidClaimException($this);
-        }
-
-        return $value;
-    }
 
     /**
      * {@inheritdoc}

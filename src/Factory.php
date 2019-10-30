@@ -80,13 +80,11 @@ class Factory
      */
     public function make($resetClaims = false)
     {
-        $payload = $this->withClaims($this->buildClaimsCollection());
-
         if ($resetClaims) {
             $this->emptyClaims();
         }
 
-        return $payload;
+        return $this->withClaims($this->buildClaimsCollection());
     }
 
     /**

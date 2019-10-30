@@ -16,13 +16,16 @@ use Illuminate\Http\Request;
 use Illuminate\Auth\GuardHelpers;
 use Illuminate\Contracts\Auth\Guard;
 use Tymon\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Support\Traits\Macroable;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Illuminate\Contracts\Auth\UserProvider;
 use Tymon\JWTAuth\Exceptions\UserNotDefinedException;
 
 class JWTGuard implements Guard
 {
-    use GuardHelpers;
+    use GuardHelpers, Macroable {
+        __call as macroCall;
+    }
 
     /**
      * The user we last attempted to retrieve.
@@ -136,9 +139,10 @@ class JWTGuard implements Guard
      */
     public function login(JWTSubject $user)
     {
-        $this->setUser($user);
+        $token = $this->jwt->fromUser($user);
+        $this->setToken($token)->setUser($user);
 
-        return $this->jwt->fromUser($user);
+        return $token;
     }
 
     /**
@@ -342,7 +346,7 @@ class JWTGuard implements Guard
     /**
      * Get the current request instance.
      *
-     * @return \Symfony\Component\HttpFoundation\Request
+     * @return \Illuminate\Http\Request
      */
     public function getRequest()
     {
@@ -399,7 +403,7 @@ class JWTGuard implements Guard
             return true;
         }
 
-        return $this->jwt->checkProvider($this->provider->getModel());
+        return $this->jwt->checkSubjectModel($this->provider->getModel());
     }
 
     /**
@@ -432,6 +436,10 @@ class JWTGuard implements Guard
     {
         if (method_exists($this->jwt, $method)) {
             return call_user_func_array([$this->jwt, $method], $parameters);
+        }
+
+        if (static::hasMacro($method)) {
+            return $this->macroCall($method, $parameters);
         }
 
         throw new BadMethodCallException("Method [$method] does not exist.");
